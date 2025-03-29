@@ -119,7 +119,7 @@ Cashfree.XEnvironment = Cashfree.Environment.SANDBOX; // write PRODUCTION for li
 
 const cashfreePayment = catchAsyncError(async (req, res, next) => {
   try {
-    console.log("Running")
+    // console.log("Running")
     const { amount, currency } = req.body;
 
     const user = req.user;
