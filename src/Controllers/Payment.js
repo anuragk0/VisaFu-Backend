@@ -5,6 +5,10 @@ const axios = require("axios");
 // const Client = require("../Model/Client");
 const { Cashfree } = require("cashfree-pg");
 const Payment = require("../Model/Payment");
+const uploadFiletoS3 = require("../../utils/uploadFile");
+const Photo = require("../Model/Photo");
+const Passport = require("../Model/Passport");
+const VisaApplied = require("../Model/VisaApplied");
 
 const newPayment = catchAsyncError(async (req, res, next) => {
   const merchantTransactionId = "M" + Date.now();
@@ -119,10 +123,54 @@ Cashfree.XEnvironment = Cashfree.Environment.SANDBOX; // write PRODUCTION for li
 
 const cashfreePayment = catchAsyncError(async (req, res, next) => {
   try {
-    // console.log("Running")
-    const { amount, currency } = req.body;
+    const { amount, currency, travellerDetails } = req.body;
+    console.log(`running:`);
+
+    // console.log(
+    //   `amount: ${amount}, currency: ${currency}, travellerDetails: ${travellerDetails}`
+    // );
 
     const user = req.user;
+
+    // save to the amazon s3 bucket
+    const photoUrl = await uploadFiletoS3(travellerDetails.photo);
+    const passportFrontUrl = await uploadFiletoS3(
+      travellerDetails.passportFront
+    );
+    const passportBackUrl = await uploadFiletoS3(travellerDetails.passportBack);
+
+    let usVisaUrl = "";
+
+    if (travellerDetails.usVisa !== "") {
+      usVisaUrl = await uploadFiletoS3(travellerDetails.usVisa);
+    }
+
+    // store user details in the database
+    const photoData = new Photo({
+      image: photoUrl,
+    });
+    const saved_photo = await photoData.save();
+
+    const gendertData = await normalizeGender(
+      travellerDetails.passportData.gender
+    );
+
+    const newPassportData = new Passport({
+      frontImage: passportFrontUrl,
+      backImage: passportBackUrl,
+      details: {
+        firstName: travellerDetails.passportData.firstName,
+        lastName: travellerDetails.passportData.lastName,
+        // passportIssuedOn: passportData,
+        passportValidTill: travellerDetails.passportData.expirationDate,
+        passportNumber: travellerDetails.passportData.documentNumber,
+        // fatherName: passportData,
+        // motherName: passportData,
+        dob: travellerDetails.passportData.birthDate,
+        gender: gendertData,
+      },
+    });
+    const saved_passport = await newPassportData.save();
 
     let request = {
       order_amount: amount,
@@ -137,29 +185,90 @@ const cashfreePayment = catchAsyncError(async (req, res, next) => {
       },
     };
 
-    Cashfree.PGCreateOrder("2023-08-01", request)
-      .then((response) => {
-        // Check if Cashfree response is successful
-        if (response.data && response.data.order_id) {
-          return res.status(200).send(response.data);
-        } else {
-          console.error(`Unexpected Response: `, response.data);
-          return res
-            .status(500)
-            .send({ msg: "Unexpected response from Cashfree" });
-        }
-      })
-      .catch((err) => {
-        console.error(`Cashfree Error: `, err);
-        if (err.response && err.response.data) {
-          return res.status(500).send({
-            msg: "Cashfree Error",
-            details: err.response.data,
-          });
-        } else {
-          return res.status(500).send({ msg: "Unknown Cashfree Error" });
-        }
-      });
+    // Cashfree.PGCreateOrder("2023-08-01", request)
+    //   .then((response) => {
+    //     // request is created now save the details to the database
+    //     const newVisaDetails = [
+    //       {
+    //         passportId: saved_passport._id,
+    //         photoId: saved_photo._id,
+    //         usVisaId: "",
+    //       },
+    //     ];
+
+    //     // Check if Cashfree response is successful
+    //     if (response.data && response.data.order_id) {
+    //       const newVisaApplied = new VisaApplied({
+    //         visaId: travellerDetails.visaId,
+    //         userId: user._id,
+    //         departureDate: travellerDetails.departureDate,
+    //         numTravellers: travellerDetails.numOfTravellers,
+    //         visaDetails: newVisaDetails,
+    //       });
+
+    //       await newVisaApplied.save();
+    //       return res.status(200).send(response.data);
+    //     } else {
+    //       console.error(`Unexpected Response: `, response.data);
+    //       return res
+    //         .status(500)
+    //         .send({ msg: "Unexpected response from Cashfree" });
+    //     }
+    //   })
+    //   .catch((err) => {
+    //     console.error(`Cashfree Error: `, err);
+    //     if (err.response && err.response.data) {
+    //       return res.status(500).send({
+    //         msg: "Cashfree Error",
+    //         details: err.response.data,
+    //       });
+    //     } else {
+    //       return res.status(500).send({ msg: "Unknown Cashfree Error" });
+    //     }
+    //   });
+
+    try {
+      const response = await Cashfree.PGCreateOrder("2023-08-01", request);
+
+      const newVisaDetails = [
+        {
+          passportId: saved_passport._id,
+          photoId: saved_photo._id,
+          // usVisaId: "",
+        },
+      ];
+
+      if (response.data && response.data.order_id) {
+        const newVisaApplied = new VisaApplied({
+          visaId: travellerDetails.visaId,
+          userId: user._id,
+          departureDate: travellerDetails.departureDate,
+          numTravellers: travellerDetails.numOfTravellers,
+          visaDetails: newVisaDetails,
+        });
+
+        await newVisaApplied.save();
+
+        return res.status(200).send(response.data);
+      } else {
+        console.error("Unexpected Response from Cashfree:", response.data);
+        return res.status(500).send({
+          msg: "Unexpected response from Cashfree",
+          data: response.data,
+        });
+      }
+    } catch (err) {
+      console.error("Cashfree Error:", err);
+
+      if (err.response && err.response.data) {
+        return res.status(500).send({
+          msg: "Cashfree Error",
+          details: err.response.data,
+        });
+      } else {
+        return res.status(500).send({ msg: "Unknown Cashfree Error" });
+      }
+    }
   } catch (error) {
     console.error(`Internal Server Error: `, error);
     res
@@ -167,6 +276,16 @@ const cashfreePayment = catchAsyncError(async (req, res, next) => {
       .send({ msg: "Internal Server Error", details: error.message });
   }
 });
+
+const normalizeGender = (input) => {
+  const value = input?.trim().toLowerCase();
+
+  if (["male", "m"].includes(value)) return "Male";
+  if (["female", "f"].includes(value)) return "Female";
+  if (["other", "o", "others"].includes(value)) return "Other";
+
+  return "Other";
+};
 
 const cashfreePaymentVerify = catchAsyncError(async (req, res, next) => {
   try {

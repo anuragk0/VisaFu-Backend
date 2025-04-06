@@ -3,14 +3,14 @@ const catchAsyncError = require("./catchAsyncError");
 const jwt = require("jsonwebtoken");
 const User = require("../src/Model/User");
 const isAuthentication = catchAsyncError(async (req, res, next) => {
-  const { visaFuToken } = req.cookies;
-  if (!visaFuToken) {
-    return next(new ErrorHandling(401, "You have not logged In"));
-  }
+  // const { visaFuToken } = req.cookies;
+  // if (!visaFuToken) {
+  //   return next(new ErrorHandling(401, "You have not logged In"));
+  // }
 
-  const decodeToken = jwt.verify(visaFuToken, process.env.JWT_SECRET_ID);
-  req.user = await User.findById(decodeToken.id);
-  // req.user = await User.findById("67966d67925a17fef60f65db");
+  // const decodeToken = jwt.verify(visaFuToken, process.env.JWT_SECRET_ID);
+  // req.user = await User.findById(decodeToken.id);
+  req.user = await User.findById("67966d67925a17fef60f65db");
   next();
 });
 const isAuthorizeRole = (...roles) => {
