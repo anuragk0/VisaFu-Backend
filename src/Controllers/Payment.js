@@ -127,8 +127,17 @@ const cashfreePayment = catchAsyncError(async (req, res, next) => {
     console.log(`running:`);
 
     // console.log(
-    //   `amount: ${amount}, currency: ${currency}, travellerDetails: ${travellerDetails}`
+    //   `amount: ${amount}, currency: ${currency}, travellerDetails: ${travellerDetails.passportData}`
     // );
+
+    // console.log(
+    //   `amount: ${amount}, currency: ${currency}, travellerDetails: ${JSON.stringify(
+    //     travellerDetails,
+    //     null,
+    //     2
+    //   )}`
+    // );
+    // return;
 
     const user = req.user;
 
@@ -238,6 +247,8 @@ const cashfreePayment = catchAsyncError(async (req, res, next) => {
         },
       ];
 
+      // console.log(`travellerDetails : `, travellerDetails);
+
       if (response.data && response.data.order_id) {
         const newVisaApplied = new VisaApplied({
           visaId: travellerDetails.visaId,
@@ -294,7 +305,7 @@ const cashfreePaymentVerify = catchAsyncError(async (req, res, next) => {
 
     Cashfree.PGOrderFetchPayments("2023-08-01", orderId)
       .then(async (response) => {
-        console.log(`response: `, response.data);
+        // console.log(`response: `, response.data);
 
         if (Array.isArray(response.data) && response.data.length > 0) {
           const payment = response.data[0];

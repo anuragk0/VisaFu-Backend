@@ -3,7 +3,7 @@ const { v4: uuidv4 } = require("uuid");
 
 const uploadFiletoS3 = async (file) => {
   // Generate a unique key using UUID
-  console.log(file);
+  // console.log(file);
   const uniqueKey = `${uuidv4()}-${file.name}`;
 
   const bufferData = Buffer.from(file.data, "base64");
