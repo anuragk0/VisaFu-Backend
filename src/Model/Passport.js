@@ -29,7 +29,7 @@ const passportSchema = new mongoose.Schema({
     passportNumber: {
       type: String,
       required: true,
-      unique: true,
+      // unique: true,
     },
     // fatherName: {
     //     type: String,
