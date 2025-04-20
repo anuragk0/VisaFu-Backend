@@ -9,7 +9,8 @@ const paymentSchema = new mongoose.Schema(
     },
     cfPaymentId: {
       type: String,
-      required: true,
+      // required: true
+      default: null,
     },
     amount: {
       type: Number,
@@ -26,7 +27,8 @@ const paymentSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      required: false,
+      default: null,
+      // required: false,
     },
     customerId: {
       type: mongoose.Schema.Types.ObjectId,

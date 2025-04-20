@@ -14,7 +14,7 @@ const visaAppliedSchema = new Schema({
         ref: "Passport",
         required: true,
       },
-      photoId: { type: Schema.Types.ObjectId, ref: "Passport", required: true },
+      photoId: { type: Schema.Types.ObjectId, ref: "Photo", required: true },
       usVisaId: { type: Schema.Types.ObjectId, ref: "UsVisa" },
     },
   ],
@@ -28,17 +28,18 @@ const visaAppliedSchema = new Schema({
   //     total: { type: Number }
   // }],
   // fairValue: {
-  //     totalAmount: { type: String, required: true },
-  //     gst: { type: String, required: true },
-  //     visaFuCharge: { type: String, required: true },
-  //     totalAddOnsCharge: { type: String, required: true },
-  //     grandTotal: { type: String, required: true },
-  //     discount: { type: String, required: true }
+  //   totalAmount: { type: String, required: true },
+  //   gst: { type: String, required: true },
+  //   visaFuCharge: { type: String, required: true },
+  //   totalAddOnsCharge: { type: String, required: true },
+  //   grandTotal: { type: String, required: true },
+  //   discount: { type: String, required: true },
   // },
+  paymentId: { type: String, required: true },
   // paymentStatus: {
-  //     type: String,
-  //     enum: ['Pending', 'Paid', 'Failed'],
-  //     default: 'Pending'
+  //   type: String,
+  //   enum: ["Pending", "Paid", "Failed"],
+  //   default: "Pending",
   // },
   emailId: [{ type: String }],
 });
