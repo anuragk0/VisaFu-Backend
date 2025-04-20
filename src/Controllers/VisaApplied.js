@@ -88,7 +88,9 @@ const createVisaApplied = catchAsyncError(async (req, res, next) => {
     });
 
     await newVisaApplied.save();
-
+    let user = req.user;
+    user.visaAppliedId.push(newVisaApplied._id);
+    user.save();
     res.status(201).json({
         message: 'Visa application created successfully',
         data: newVisaApplied
