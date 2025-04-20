@@ -159,11 +159,8 @@ const cashfreePayment = catchAsyncError(async (req, res, next) => {
       details: {
         firstName: travellerDetails.passportData.firstName,
         lastName: travellerDetails.passportData.lastName,
-        // passportIssuedOn: passportData,
         passportValidTill: travellerDetails.passportData.expirationDate,
         passportNumber: travellerDetails.passportData.documentNumber,
-        // fatherName: passportData,
-        // motherName: passportData,
         dob: travellerDetails.passportData.birthDate,
         gender: gendertData,
       },

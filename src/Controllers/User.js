@@ -139,15 +139,11 @@ const updateProfile = catchAsyncError(async (req, res, next) => {
 
     if (passportDetails) {
       passport.details = {
-        passportIssuedOn:
-          passportDetails.passportIssuedOn || passport.details.passportIssuedOn,
         passportValidTill:
           passportDetails.passportValidTill ||
           passport.details.passportValidTill,
         passportNumber:
           passportDetails.passportNumber || passport.details.passportNumber,
-        fatherName: passportDetails.fatherName || passport.details.fatherName,
-        motherName: passportDetails.motherName || passport.details.motherName,
         dob: passportDetails.dob || passport.details.dob,
         gender: passportDetails.gender || passport.details.gender,
         firstName: passportDetails.firstName || passport.details.firstName,
