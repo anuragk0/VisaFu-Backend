@@ -3,11 +3,11 @@ const {isAuthentication,isAuthorizeRole}=require('../../middleware/authenticatio
 const app=Express.Router();
 const {createVisa, getAllVisas, getVisaById, updateVisa, deleteVisa, getAllVisasCard} = require('../Controllers/Visa');
 
-app.post('/createVisa', createVisa);
-app.put('/updateVisa/:id', updateVisa);
+app.post('/createVisa', isAuthentication,isAuthorizeRole("admin"), createVisa);
+app.put('/updateVisa/:id', isAuthentication,isAuthorizeRole("admin"),updateVisa);
 app.get('/getVisa/:id',getVisaById);
 app.get('/getAllVisas',getAllVisas);
 app.get('/getAllVisasCard', getAllVisasCard);
-app.delete('/deleteVisa/:id',deleteVisa);
+app.delete('/deleteVisa/:id',isAuthentication,isAuthorizeRole("admin"),deleteVisa);
 
 module.exports=app;

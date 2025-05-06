@@ -7,7 +7,7 @@ var cors = require("cors");
 
 //Config
 if (process.env.NODE_ENV !== "Production") {
-  require("dotenv").config({ path: "./config/config.env" });
+  require("dotenv").config({ path: ".env" });
 }
 
 //middleware

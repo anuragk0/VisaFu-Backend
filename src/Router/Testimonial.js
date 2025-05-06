@@ -3,11 +3,11 @@ const {isAuthentication,isAuthorizeRole}=require('../../middleware/authenticatio
 const { createTestimonial, getAllTestimonials, updateTestimonial, deleteTestimonial } = require('../Controllers/Testimonial');
 const app = express.Router();
 
-app.post('/createTestimonial', createTestimonial);
+app.post('/createTestimonial',isAuthentication,isAuthorizeRole("admin"), createTestimonial);
 
 app.get('/getAllTestimonials', getAllTestimonials);
 
-app.put('/updateTestimonial/:id', updateTestimonial);
+app.put('/updateTestimonial/:id', isAuthentication,isAuthorizeRole("admin"), updateTestimonial);
 
 app.delete('/deleteTestimonial/:id',isAuthentication, isAuthorizeRole("admin"), deleteTestimonial);
 

@@ -18,36 +18,21 @@ const passportSchema = new mongoose.Schema({
       type: String,
       required: true,
     },
-    // passportIssuedOn: {
-    //   type: Date,
-    //   required: true
-    // },
-    passportValidTill: {
+    expirationDate: {
       type: Date,
       required: true,
     },
-    passportNumber: {
+    documentNumber: {
       type: String,
       required: true,
-      // unique: true,
     },
-    // fatherName: {
-    //     type: String,
-    //     required: true,
-    //     unique: true
-    // },
-    // motherName: {
-    //     type: String,
-    //     required: true,
-    //     unique: true
-    // },
-    dob: {
+    birthDate: {
       type: Date,
       required: true,
     },
-    gender: {
+    sex: {
       type: String,
-      enum: ["Male", "Female", "Other"],
+      enum: ["male", "female", "other"],
       required: true,
     },
   },

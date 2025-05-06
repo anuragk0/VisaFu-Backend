@@ -3,6 +3,7 @@ const catchAsyncError = require('../../middleware/catchAsyncError');
 const uploadFiletoS3 = require('../../utils/uploadFile');
 const Passport = require('../Model/Passport');
 const Photo = require('../Model/Photo');
+const UsVisa = require('../Model/UsVisa');
 const VisaApplied = require('../Model/VisaApplied');
 
 // upload documents 
@@ -11,7 +12,6 @@ const uploadDocuments = async (documents) => {
 
     for (const document of documents) {
         const detail = {};
-
         // Handling Passport
         if (document.passport) {
             const { passportFrontImage, passportBackImage, passportDetails } = document.passport;
@@ -43,13 +43,12 @@ const uploadDocuments = async (documents) => {
 
         // Handling US Visa
         if (document.usVisa) {
-            const { usVisaImage, usVisaDetails } = document.usVisa;
+            const { usVisaImage } = document.usVisa;
 
             const usVisaImageUrl = await uploadFiletoS3(usVisaImage);
 
             const usVisaDoc = await UsVisa.create({
-                image: usVisaImageUrl,
-                details: usVisaDetails
+                image: usVisaImageUrl
             });
 
             detail.usVisaId = usVisaDoc._id;
@@ -62,40 +61,37 @@ const uploadDocuments = async (documents) => {
 };
 
 // Create new Visa Applied
-const createVisaApplied = catchAsyncError(async (req, res, next) => {
+const createVisaApplied =  async (detail, paymentId, user) => {
     const {
         visaId,
         departureDate,
-        numberOfTravellers,
-        documents,
-        addOns,
+        numTravellers,
+        travellerDetails,
+        // addOns,
         fairValue,
-        paymentStatus,
-    } = req.body;
+        deliveryDate
+    } = detail;
      
-    const userId = req.user._id;
-    const visaDetails = uploadDocuments(documents);
+    const userId = user._id;
+    const visaDetails = await uploadDocuments(travellerDetails);
 
     const newVisaApplied = new VisaApplied({
         visaId,
         userId,
         departureDate,
-        numberOfTravellers,
+        numTravellers,
         visaDetails,
-        addOns: addOns || [],
+        // addOns: addOns || [],
         fairValue,
-        paymentStatus,
+        paymentId,
+        deliveryDate
     });
 
     await newVisaApplied.save();
-    let user = req.user;
-    user.visaAppliedId.push(newVisaApplied._id);
+    user.visaAppliedIds.push(newVisaApplied._id);
     user.save();
-    res.status(201).json({
-        message: 'Visa application created successfully',
-        data: newVisaApplied
-    });
-});
+    return newVisaApplied;
+};
 
 const updateStatus = catchAsyncError( async (req,res,next)=>{
     const { visaAppliedId } = req.params; 

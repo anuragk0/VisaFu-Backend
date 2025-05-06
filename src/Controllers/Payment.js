@@ -2,14 +2,9 @@ const ErrorHandling = require("../../utils/Errorhandling");
 const catchAsyncError = require("../../middleware/catchAsyncError");
 const crypto = require("crypto");
 const axios = require("axios");
-// const Client = require("../Model/Client");
 const { Cashfree } = require("cashfree-pg");
 const Payment = require("../Model/Payment");
-const uploadFiletoS3 = require("../../utils/uploadFile");
-const Photo = require("../Model/Photo");
-const Passport = require("../Model/Passport");
-const VisaApplied = require("../Model/VisaApplied");
-const User = require("../Model/User");
+const { createVisaApplied } = require("./VisaApplied");
 
 const newPayment = catchAsyncError(async (req, res, next) => {
   const merchantTransactionId = "M" + Date.now();
@@ -124,58 +119,16 @@ Cashfree.XEnvironment = Cashfree.Environment.SANDBOX; // write PRODUCTION for li
 
 const cashfreePayment = catchAsyncError(async (req, res, next) => {
   try {
-    const { amount, currency, travellerDetails } = req.body;
-    console.log(`running:`);
+    const { amount, currency} = req.body;
 
     const user = req.user;
-
-    // save to the amazon s3 bucket
-    const photoUrl = await uploadFiletoS3(travellerDetails.photo);
-    const passportFrontUrl = await uploadFiletoS3(
-      travellerDetails.passportFront
-    );
-
-    const passportBackUrl = await uploadFiletoS3(travellerDetails.passportBack);
-
-    let usVisaUrl = "";
-
-    if (travellerDetails.usVisa !== "") {
-      usVisaUrl = await uploadFiletoS3(travellerDetails.usVisa);
-    }
-
-    // store user details in the database
-    const photoData = new Photo({
-      image: photoUrl,
-    });
-    const saved_photo = await photoData.save();
-
-    const gendertData = await normalizeGender(
-      travellerDetails.passportData.gender
-    );
-
-    const newPassportData = new Passport({
-      frontImage: passportFrontUrl,
-      backImage: passportBackUrl,
-      details: {
-        firstName: travellerDetails.passportData.firstName,
-        lastName: travellerDetails.passportData.lastName,
-        passportValidTill: travellerDetails.passportData.expirationDate,
-        passportNumber: travellerDetails.passportData.documentNumber,
-        dob: travellerDetails.passportData.birthDate,
-        gender: gendertData,
-      },
-    });
-    const saved_passport = await newPassportData.save();
 
     let request = {
       order_amount: amount,
       order_currency: currency,
       order_id: await generateOrderId(),
-      // order_note: "order note",
       customer_details: {
         customer_id: user._id,
-        // customer_name: "kamlesh",
-        // customer_email: "kamlesh@gmail.com",
         customer_phone: user.mobile,
       },
     };
@@ -183,21 +136,8 @@ const cashfreePayment = catchAsyncError(async (req, res, next) => {
     try {
       const response = await Cashfree.PGCreateOrder("2023-08-01", request);
 
-      const newVisaDetails = [
-        {
-          passportId: saved_passport._id,
-          photoId: saved_photo._id,
-          // usVisaId: "",
-        },
-      ];
-
-      // console.log(`travellerDetails : `, travellerDetails);
-
       if (response.data && response.data.order_id) {
-        console.log(`response : `, response.data);
-
         const payment = response.data;
-
         const newPayment = new Payment({
           orderId: payment.order_id,
           amount: payment.order_amount,
@@ -206,20 +146,11 @@ const cashfreePayment = catchAsyncError(async (req, res, next) => {
         });
 
         const saved_payment = await newPayment.save();
+        
+        const visaApplied = await createVisaApplied(req.body, saved_payment._id,user);
 
-        const newVisaApplied = new VisaApplied({
-          visaId: travellerDetails.visaId,
-          userId: user._id,
-          departureDate: travellerDetails.departureDate,
-          numTravellers: travellerDetails.numOfTravellers,
-          paymentId: saved_payment._id,
-          visaDetails: newVisaDetails,
-        });
-
-        await newVisaApplied.save();
-
-        user.visaAppliedIds.push(newVisaApplied._id);
-        await user.save();
+        console.log("Visa Applied Created:", visaApplied);
+        response.data.visaAppliedId = visaApplied._id;
 
         return res.status(200).send(response.data);
       } else {
@@ -249,26 +180,13 @@ const cashfreePayment = catchAsyncError(async (req, res, next) => {
   }
 });
 
-const normalizeGender = (input) => {
-  const value = input?.trim().toLowerCase();
-
-  if (["male", "m"].includes(value)) return "Male";
-  if (["female", "f"].includes(value)) return "Female";
-  if (["other", "o", "others"].includes(value)) return "Other";
-
-  return "Other";
-};
-
 const cashfreePaymentVerify = catchAsyncError(async (req, res, next) => {
   try {
     let { orderId } = req.body;
     let userId = req.user._id;
 
-    console.log(`orderId: `, orderId);
-
     Cashfree.PGOrderFetchPayments("2023-08-01", orderId)
       .then(async (response) => {
-        // console.log(`response: `, response.data);
 
         if (Array.isArray(response.data) && response.data.length > 0) {
           const payment = response.data[0];

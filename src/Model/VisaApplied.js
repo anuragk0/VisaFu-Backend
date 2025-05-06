@@ -7,6 +7,7 @@ const visaAppliedSchema = new Schema({
   createdBy: { type: Date, default: Date.now },
   departureDate: { type: String, required: true },
   numTravellers: { type: Number, required: true },
+  deliveryDate: { type: String, required: true },
   visaDetails: [
     {
       passportId: {
@@ -27,21 +28,16 @@ const visaAppliedSchema = new Schema({
   //     id: { type: Schema.Types.ObjectId, ref: 'AddOn' },
   //     total: { type: Number }
   // }],
-  // fairValue: {
-  //   totalAmount: { type: String, required: true },
-  //   gst: { type: String, required: true },
-  //   visaFuCharge: { type: String, required: true },
-  //   totalAddOnsCharge: { type: String, required: true },
-  //   grandTotal: { type: String, required: true },
-  //   discount: { type: String, required: true },
-  // },
-  paymentId: { type: String, required: true },
-  // paymentStatus: {
-  //   type: String,
-  //   enum: ["Pending", "Paid", "Failed"],
-  //   default: "Pending",
-  // },
-  emailId: [{ type: String }],
+  fairValue: {
+    totalAmount: { type: String, required: true },
+    visaFuCharge: { type: String, required: true },
+    totalAddOnsCharge: { type: String, required: true },
+    grandTotal: { type: String, required: true },
+    discount: { type: String, required: true },
+    currency: { type: String, required: true },
+    tax: { type: String, required: true }
+  },
+  paymentId: { type: Schema.Types.ObjectId, ref: "Payment", required: true }
 });
 
 const VisaApplied = mongoose.model("VisaApplied", visaAppliedSchema);
