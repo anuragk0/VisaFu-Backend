@@ -93,15 +93,16 @@ const verifyOtp = catchAsyncError(async (req, res, next) => {
 
 //logged Out
 const logOut = catchAsyncError(async (req, res, next) => {
-  res.cookie("token", null, {
+  res.cookie("visaFuToken", "", {
     httpOnly: true,
-    expires: new Date(Date.now()),
-  });
-
-  res.json({
+    expires: new Date(0), // set to past
+    sameSite: "None",     // if you're using cross-site cookies
+    secure: true          // if using HTTPS
+  }).json({
     success: true,
     message: "Successfully logged Out",
   });
+  
 });
 
 // for updating profile

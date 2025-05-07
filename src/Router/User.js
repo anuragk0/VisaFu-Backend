@@ -5,7 +5,7 @@ const {sendOtp, verifyOtp, logOut, updateProfile, getProfile, getUser, getUsers}
 
 app.post('/sendOtp', sendOtp);
 app.post('/verifyOtp',verifyOtp);
-app.get('/logOut',logOut);
+app.get('/logOut',isAuthentication,logOut);
 app.put('/updateProfile',isAuthentication, updateProfile);
 app.get('/getProfile',isAuthentication,getProfile);
 app.get('/getUser/:id',isAuthentication,isAuthorizeRole("admin"),getUser);
