@@ -19,7 +19,7 @@ app.use(
 );
 
 app.use(fileupload());
-app.use(express.json({ limit: "1300kb" }));
+app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
