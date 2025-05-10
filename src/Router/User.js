@@ -1,8 +1,9 @@
 const Express=require('express');
 const {isAuthentication,isAuthorizeRole}=require('../../middleware/authentication');
 const app=Express.Router();
-const {sendOtp, verifyOtp, logOut, updateProfile, getProfile, getUser, getUsers} = require('../Controllers/User');
+const {signUp, sendOtp, verifyOtp, logOut, updateProfile, getProfile, getUser, getUsers} = require('../Controllers/User');
 
+app.post('/signUp', signUp);
 app.post('/sendOtp', sendOtp);
 app.post('/verifyOtp',verifyOtp);
 app.get('/logOut',isAuthentication,logOut);

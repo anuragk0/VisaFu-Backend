@@ -7,6 +7,61 @@ const generateOTP = require("../../utils/Otp");
 const { snsClient, PublishCommand } = require("../../utils/AWS/SNS");
 const sendToken = require("../../utils/SendToken");
 const uploadFiletoS3 = require("../../utils/uploadFile");
+const SignUp = require("../Model/SignUp");
+
+const signUp = catchAsyncError(async (req, res, next) => {
+  const { mobile, email } = req.body;
+
+  if (!mobile || !email) {
+    return next(new ErrorHandling(400, "mobile number or email is required"));
+  }
+
+  let user = await User.findOne({ mobile });
+
+  // If user doesn't exist, create a new one
+  if (user) {
+    return next(new ErrorHandling(400, "user already exists"));
+  }
+
+  const otp = generateOTP();
+
+  let newUser = await SignUp.findOneAndUpdate(
+    { mobile },
+    { mobile, email, otp },
+    { new: true, upsert: true }
+  );
+
+
+  await newUser.save();
+
+  const params = {
+    Message: `Your VisaFu verification OTP is: ${otp}. This code will expire in 1 minute`,
+    PhoneNumber: `+${mobile}`,
+    MessageAttributes: {
+      "AWS.SNS.SMS.SMSType": {
+        DataType: "String",
+        StringValue: "Transactional",
+      },
+    },
+  };
+
+  console.log(params);
+
+  const command = new PublishCommand(params);
+
+  snsClient
+    .send(command)
+    .then((result) => {
+      return res.status(200).send({
+        message: "OTP send successfully",
+      });
+    })
+    .catch((error) => {
+      return res.status(500).send({
+        message: "Error Sending OTP",
+      });
+    });
+});
 
 // sendOtp || signUp
 const sendOtp = catchAsyncError(async (req, res, next) => {
@@ -22,7 +77,7 @@ const sendOtp = catchAsyncError(async (req, res, next) => {
 
   // If user doesn't exist, create a new one
   if (!user) {
-    user = new User({ mobile, otp, otpCreatedAt: new Date() });
+    return next(new ErrorHandling(400, "user not found"));
   } else {
     user.otp = otp;
     user.otpCreatedAt = new Date();
@@ -68,27 +123,52 @@ const isOtpExpired = (otpCreatedAt) => {
 
 // for verify Otp
 const verifyOtp = catchAsyncError(async (req, res, next) => {
-  const { mobile, otp } = req.body;
+  const { mobile, otp, page } = req.body;
 
-  if (!mobile || !otp) {
+  if (!mobile || !otp ) {
     return next(new ErrorHandling(400, "mobile number or otp is required"));
   }
 
-  const user = await User.findOne({ mobile });
+  if (page === "signUp") {
+    const user = await SignUp.findOne({ mobile });
+    if (!user) {
+      return next(new ErrorHandling(400, "user not found"));
+    }
+    
+    if (isOtpExpired(user.otpCreatedAt)) {
+      return next(new ErrorHandling(400, "otp is expired"));
+    }
+    if (user.otp !== otp) {
+      return next(new ErrorHandling(400, "invalid otp"));
+    }
+    const newUser = new User({
+      mobile,
+      email: user.email
+    });
 
-  if (!user) {
-    return next(new ErrorHandling(400, "user not found"));
+    await newUser.save();
+    await SignUp.deleteOne({ mobile });
+
+    sendToken(newUser, res, 200);
+
+  } else if (page === "signIn") {
+    const user = await User.findOne({ mobile });
+
+    if (!user) {
+      return next(new ErrorHandling(400, "user not found"));
+    }
+  
+    if (isOtpExpired(user.otpCreatedAt)) {
+      return next(new ErrorHandling(400, "otp is expired"));
+    }
+  
+    if (user.otp !== otp) {
+      return next(new ErrorHandling(400, "invalid otp"));
+    }
+  
+    sendToken(user, res, 200);
   }
-
-  if (isOtpExpired(user.otpCreatedAt)) {
-    return next(new ErrorHandling(400, "otp is expired"));
-  }
-
-  if (user.otp !== otp) {
-    return next(new ErrorHandling(400, "invalid otp"));
-  }
-
-  sendToken(user, res, 200);
+  
 });
 
 //logged Out
@@ -102,76 +182,26 @@ const logOut = catchAsyncError(async (req, res, next) => {
     success: true,
     message: "Successfully logged Out",
   });
-  
+
 });
 
 // for updating profile
 const updateProfile = catchAsyncError(async (req, res, next) => {
   const { email } = req.body;
-  const passportDetails = JSON.parse(req.body.passportDetails);
 
-  const user = req.user;
+  const userId = req.user._id;
+  const user = await User.findById(userId).populate({
+    path: "visaAppliedIds",
+    populate: [
+      { path: "visaDetails.passportId", model: "Passport" },
+      { path: "visaDetails.photoId", model: "Photo" },
+      { path: "visaId", model: "Visa" },
+      { path: "paymentId", model: "Payment" }
+    ],
+  });
 
   if (email) {
     user.email = email;
-  }
-
-  let passportId = user.passportId;
-
-  if (
-    passportDetails &&
-    req.files &&
-    (req.files["passportFront"] || req.files["passportBack"])
-  ) {
-    let frontImageUrl, backImageUrl;
-    if (req.files["passportFront"]) {
-      frontImageUrl = await uploadFiletoS3(req.files["passportFront"]);
-    }
-    if (req.files["passportBack"]) {
-      backImageUrl = await uploadFiletoS3(req.files["passportBack"]);
-    }
-
-    let passport = passportId
-      ? await Passport.findById(passportId)
-      : new Passport();
-
-    if (frontImageUrl) passport.frontImage = frontImageUrl;
-    if (backImageUrl) passport.backImage = backImageUrl;
-
-    if (passportDetails) {
-      passport.details = {
-        passportValidTill:
-          passportDetails.passportValidTill ||
-          passport.details.passportValidTill,
-        passportNumber:
-          passportDetails.passportNumber || passport.details.passportNumber,
-        dob: passportDetails.dob || passport.details.dob,
-        gender: passportDetails.gender || passport.details.gender,
-        firstName: passportDetails.firstName || passport.details.firstName,
-        lastName: passportDetails.lastName || passport.details.lastName,
-      };
-    }
-
-    await passport.save();
-    passportId = passport._id;
-  }
-
-  let photoId = user.photoId;
-  if (req.files && req.files["photo"]) {
-    const photoImageUrl = await uploadFiletoS3(req.files["photo"]);
-
-    let photo = photoId ? await Photo.findById(photoId) : new Photo();
-    photo.image = photoImageUrl;
-    await photo.save();
-
-    photoId = photo._id;
-  }
-
-  if (passportId) {
-    user.passportId = passportId;
-  }
-  if (photoId) {
-    user.photoId = photoId;
   }
 
   await user.save();
@@ -222,6 +252,7 @@ const getUsers = catchAsyncError(async (req, res, next) => {
 });
 
 module.exports = {
+  signUp,
   verifyOtp,
   sendOtp,
   logOut,
