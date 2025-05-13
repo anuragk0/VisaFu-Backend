@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
 const passportSchema = new mongoose.Schema({
   frontImage: {
@@ -9,40 +10,63 @@ const passportSchema = new mongoose.Schema({
     type: String, // URL or path to the back side image of the passport
     required: true,
   },
+  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
   details: {
     firstName: {
-      type: String,
-      required: true,
+      type: String
     },
     lastName: {
-      type: String,
-      required: true,
+      type: String
     },
     expirationDate: {
-      type: Date,
-      required: true,
+      type: String
     },
-    documentNumber: {
-      type: String,
-      required: true,
+    issueDate:{
+      type: String
+    },
+    fileNumber: {
+      type: String
     },
     birthDate: {
-      type: Date,
-      required: true,
+      type: String
     },
     sex: {
-      type: String,
-      enum: ["male", "female", "other"],
-      required: true,
+      type: String
     },
+    district: {
+      type: String
+    },
+    fatherName: {
+      type: String
+    },
+    passportNumber: {
+      type: String
+    },
+    motherName: {
+      type: String  
+    },
+    nationality: {
+      type: String
+    },
+    pincode: {
+      type: String
+    },
+    address: {
+      type: String
+    },
+    state: {
+      type: String
+    }
+
   },
-  uploadDate: {
+  createdAt: {
     type: Date,
     default: Date.now,
   },
   verified: {
-    type: Boolean,
-    default: false,
+    type: String,
+    enum: ["success", "failed"],
+    default: "failed"
   },
 });
 

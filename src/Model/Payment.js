@@ -22,7 +22,7 @@ const paymentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["PENDING", "SUCCESS", "FAILED"],
+      enum: ["PENDING", "SUCCESS", "FAILURE", "VOID", "INCOMPLETE", "FLAGGED", "CANCELLED","USER_DROPPED"],
       default: "PENDING",
     },
     paymentMethod: {
@@ -34,6 +34,13 @@ const paymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    visaAppliedId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "VisaApplied"
+    },
+    invoice: {
+      type: String
     },
     createdAt: {
       type: Date,

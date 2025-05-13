@@ -1,8 +1,8 @@
 const Express=require('express');
 const {isAuthentication}=require('../../middleware/authentication');
 const app=Express.Router();
-const {verifyPhoto} = require('../Controllers/Photo');
+const {getDocument} = require('../Controllers/Document');
 
-app.get('/verifyPhoto',isAuthentication,verifyPhoto);
+app.post('/getDocument/:num', isAuthentication, getDocument);
 
 module.exports=app;

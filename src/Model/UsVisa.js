@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
 const usVisaSchema = new mongoose.Schema({
   image: {
@@ -6,10 +7,12 @@ const usVisaSchema = new mongoose.Schema({
     required: true
   },
   verified: {
-    type: Boolean, 
-    default: false 
+    type: String,
+    enum: ["success", "failed"],
+    default: "failed"
   },
-  uploadDate: {
+  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  createdAt: {
     type: Date, 
     default: Date.now 
   }
