@@ -37,4 +37,4 @@ const SendMail = async (options) => {
     .catch((err) => console.error('Error sending email: ', err));
 };
 
-module.exports = { SendMail };
+module.exports =  SendMail;

@@ -5,9 +5,11 @@ const { Cashfree } = require("cashfree-pg");
 const Payment = require("../Model/Payment");
 const { createVisaApplied } = require("../Service/VisaApplied");
 const { generateInvoicePdfBuffer } = require("../../utils/GenerateInvoicePdfBuffer");
-const { uploadFiletoS3 } = require("../../utils/uploadFile");
+const  uploadFiletoS3  = require("../../utils/uploadFile");
 const VisaApplied = require("../Model/VisaApplied");
 const SendMail = require("../../utils/SendMail");
+const fs = require("fs");
+const path = require("path");
 
 const { v4: uuidv4 } = require('uuid');
 
@@ -21,20 +23,21 @@ const generateAndSendInvoice = async (user, visaApplied) => {
   const data = {
     invoiceNo,
     date: new Date().toLocaleDateString('en-IN'),
-    country: visaApplied.visaId.countryName,
-    numTravellers: visaApplied.numTravellers,
-    totalVisaPrice: visaApplied.fairValue.totalAmount,
-    totalVisaFuCharge: visaApplied.fairValue.visaFuCharge,
-    subTotal: visaApplied.fairValue.totalAmount + visaApplied.fairValue.visaFuCharge,
-    totalAddOnsCharge: visaApplied.fairValue.totalAddOnsCharge,
-    grandTotal: visaApplied.fairValue.grandTotal,
-    discount: visaApplied.fairValue.discount,
-    currency: visaApplied.fairValue.currency,
-    tax: visaApplied.fairValue.tax,
-    name: user.name
+    country: visaApplied?.visaId?.countryName,
+    numTravellers: visaApplied?.numTravellers,
+    totalVisaPrice: visaApplied?.fairValue?.totalAmount,
+    totalVisaFuCharge: visaApplied?.fairValue?.visaFuCharge,
+    subTotal: visaApplied?.fairValue?.totalAmount + visaApplied?.fairValue?.visaFuCharge,
+    totalAddOnsCharge: visaApplied?.fairValue?.totalAddOnsCharge,
+    grandTotal: visaApplied?.fairValue?.grandTotal,
+    discount: visaApplied?.fairValue?.discount,
+    currency: visaApplied?.fairValue?.currency,
+    tax: visaApplied?.fairValue?.tax,
+    name: user?.name
   };
 
-  const invoiceHtml = fs.readFileSync('src/Templates/invoice.html', 'utf8');
+  const filePath = path.join(__dirname, '..', 'Templates', 'invoice.html');
+  const invoiceHtml = fs.readFileSync(filePath, 'utf8');
   const pdfBuffer = await generateInvoicePdfBuffer(invoiceHtml, data);
 
   const invoiceUrl = await uploadFiletoS3({
@@ -46,18 +49,17 @@ const generateAndSendInvoice = async (user, visaApplied) => {
   await SendMail({
     to: user.email,
     subject: "🛠️ Visa in Progress – Invoice Inside!",
-    message: `Hey ${user.name},
+    text: `Hey ${user.name},
+Awesome news – your visa is officially in process! 🧳✈️
+We’re working on it, and in the meantime, here’s your invoice for the purchase. 🧾
   
-  Awesome news – your visa is officially in process! 🧳✈️
-  We’re working on it, and in the meantime, here’s your invoice for the purchase. 🧾
+This is a no-reply email (robots don’t make great pen pals 🤖),
+so if you need anything at all, just drop us a line at support@visafu.com – we’ve got your back!
   
-  This is a no-reply email (robots don’t make great pen pals 🤖),
-  so if you need anything at all, just drop us a line at support@visafu.com – we’ve got your back!
+Thanks for choosing Visafu – your stress-free visa sidekick. 😎
   
-  Thanks for choosing Visafu – your stress-free visa sidekick. 😎
-  
-  Cheers,
-  The Visafu Team 🌍`,
+Cheers,
+The Visafu Team 🌍`,
     s3File: [
       {
         filename: `invoice-${invoiceNo}.pdf`,
